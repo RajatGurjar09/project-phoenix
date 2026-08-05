@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/RajatGurjar09/project-phoenix/backend/internal/handlers"
+	"github.com/RajatGurjar09/project-phoenix/backend/internal/middleware"
 )
 
 const (
@@ -16,13 +17,14 @@ const (
 
 func New(address string, version string, startedAt time.Time) *http.Server {
 	h := handlers.New(version, startedAt)
+
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", h.Health)
 	mux.HandleFunc("GET /version", h.Version)
 
 	return &http.Server{
 		Addr:              address,
-		Handler:           mux,
+		Handler:           middleware.RequestLogger(mux),
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
 		WriteTimeout:      writeTimeout,
