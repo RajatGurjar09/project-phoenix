@@ -14,8 +14,8 @@ const (
 	idleTimeout       = 60 * time.Second
 )
 
-func New(address string, version string) *http.Server {
-	h := handlers.New(version)
+func New(address string, version string, startedAt time.Time) *http.Server {
+	h := handlers.New(version, startedAt)
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", h.Health)
 	mux.HandleFunc("GET /version", h.Version)
