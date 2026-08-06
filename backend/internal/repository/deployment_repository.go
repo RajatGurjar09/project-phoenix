@@ -44,6 +44,25 @@ func (r *DeploymentRepository) CreateDeployment(ctx context.Context, deployment 
 	return createdDeployment, nil
 }
 
+// UpdateDeploymentStatus updates the status and updated_at timestamp of the deployment identified by id.
+func (r *DeploymentRepository) UpdateDeploymentStatus(ctx context.Context, id string, status string) (models.Deployment, error) {
+	const query = `
+		UPDATE deployments
+		SET status = $1, updated_at = NOW()
+		WHERE id = $2
+		RETURNING id, project_id, image, status, created_at, updated_at`
+
+	updatedDeployment, err := scanDeployment(r.db.QueryRow(ctx, query, status, id))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return models.Deployment{}, fmt.Errorf("update deployment status %q: %w", id, ErrDeploymentNotFound)
+	}
+	if err != nil {
+		return models.Deployment{}, fmt.Errorf("update deployment status %q: %w", id, err)
+	}
+
+	return updatedDeployment, nil
+}
+
 // ListDeploymentsByProject returns deployments for projectID from oldest to newest.
 func (r *DeploymentRepository) ListDeploymentsByProject(ctx context.Context, projectID string) ([]models.Deployment, error) {
 	const query = `

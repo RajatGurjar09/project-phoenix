@@ -7,6 +7,7 @@ import (
 
 	"github.com/RajatGurjar09/project-phoenix/backend/internal/config"
 	"github.com/RajatGurjar09/project-phoenix/backend/internal/database"
+	"github.com/RajatGurjar09/project-phoenix/backend/internal/docker"
 	"github.com/RajatGurjar09/project-phoenix/backend/internal/repository"
 	"github.com/RajatGurjar09/project-phoenix/backend/internal/server"
 	"github.com/RajatGurjar09/project-phoenix/backend/internal/service"
@@ -27,7 +28,8 @@ func main() {
 	projectRepository := repository.NewProjectRepository(db)
 	projectService := service.NewProjectService(projectRepository)
 	deploymentRepository := repository.NewDeploymentRepository(db)
-	deploymentService := service.NewDeploymentService(deploymentRepository)
+	dockerRuntime := docker.NewRuntime()
+	deploymentService := service.NewDeploymentService(deploymentRepository, dockerRuntime)
 	api := server.New(cfg.Address, version.Version, time.Now(), projectService, deploymentService)
 
 	log.Printf("API listening on %s", cfg.Address)
