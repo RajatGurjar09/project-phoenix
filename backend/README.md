@@ -23,3 +23,6 @@ The server listens on `:8080` by default. Set `PHOENIX_HTTP_ADDR` to override th
 - `POST /projects` creates a project from a JSON body containing `name` and an optional `description`
 - `GET /projects` returns all projects
 - `GET /projects/{id}` returns a project by ID
+- `POST /projects/{id}/deployments` creates a deployment from a JSON body containing `image` and `status`
+- `GET /projects/{id}/deployments` returns deployments for a project
+- `GET /deployments/{id}` returns a deployment by ID

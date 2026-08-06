@@ -19,14 +19,32 @@ type ProjectService interface {
 	DeleteProject(rctx context.Context, id string) error
 }
 
-type Handler struct {
-	version        string
-	startedAt      time.Time
-	projectService ProjectService
+// DeploymentService defines the deployment operations used by HTTP handlers.
+type DeploymentService interface {
+	CreateDeployment(rctx context.Context, deployment models.Deployment) (models.Deployment, error)
+	ListDeploymentsByProject(rctx context.Context, projectID string) ([]models.Deployment, error)
+	GetDeploymentByID(rctx context.Context, id string) (models.Deployment, error)
 }
 
-func New(version string, startedAt time.Time, projectService ProjectService) *Handler {
-	return &Handler{version: version, startedAt: startedAt, projectService: projectService}
+type Handler struct {
+	version           string
+	startedAt         time.Time
+	projectService    ProjectService
+	deploymentService DeploymentService
+}
+
+func New(
+	version string,
+	startedAt time.Time,
+	projectService ProjectService,
+	deploymentService DeploymentService,
+) *Handler {
+	return &Handler{
+		version:           version,
+		startedAt:         startedAt,
+		projectService:    projectService,
+		deploymentService: deploymentService,
+	}
 }
 
 func (h *Handler) Health(w http.ResponseWriter, _ *http.Request) {

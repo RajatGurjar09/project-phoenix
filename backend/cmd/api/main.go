@@ -26,7 +26,9 @@ func main() {
 
 	projectRepository := repository.NewProjectRepository(db)
 	projectService := service.NewProjectService(projectRepository)
-	api := server.New(cfg.Address, version.Version, time.Now(), projectService)
+	deploymentRepository := repository.NewDeploymentRepository(db)
+	deploymentService := service.NewDeploymentService(deploymentRepository)
+	api := server.New(cfg.Address, version.Version, time.Now(), projectService, deploymentService)
 
 	log.Printf("API listening on %s", cfg.Address)
 	if err := api.ListenAndServe(); err != nil {

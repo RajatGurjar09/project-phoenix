@@ -16,8 +16,14 @@ const (
 	idleTimeout       = 60 * time.Second
 )
 
-func New(address string, version string, startedAt time.Time, projectService *service.ProjectService) *http.Server {
-	h := handlers.New(version, startedAt, projectService)
+func New(
+	address string,
+	version string,
+	startedAt time.Time,
+	projectService *service.ProjectService,
+	deploymentService *service.DeploymentService,
+) *http.Server {
+	h := handlers.New(version, startedAt, projectService, deploymentService)
 
 	mux := http.NewServeMux()
 	mux.HandleFunc("GET /health", h.Health)
@@ -27,6 +33,9 @@ func New(address string, version string, startedAt time.Time, projectService *se
 	mux.HandleFunc("GET /projects/{id}", h.GetProject)
 	mux.HandleFunc("PATCH /projects/{id}", h.UpdateProject)
 	mux.HandleFunc("DELETE /projects/{id}", h.DeleteProject)
+	mux.HandleFunc("POST /projects/{id}/deployments", h.CreateDeployment)
+	mux.HandleFunc("GET /projects/{id}/deployments", h.ListDeploymentsByProject)
+	mux.HandleFunc("GET /deployments/{id}", h.GetDeployment)
 
 	return &http.Server{
 		Addr:              address,
