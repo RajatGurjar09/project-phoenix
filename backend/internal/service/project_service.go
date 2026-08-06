@@ -16,6 +16,7 @@ type ProjectStore interface {
 	CreateProject(ctx context.Context, project models.Project) (models.Project, error)
 	GetProjectByID(ctx context.Context, id string) (models.Project, error)
 	ListProjects(ctx context.Context) ([]models.Project, error)
+	DeleteProject(ctx context.Context, id string) error
 }
 
 // ProjectService contains project domain operations.
@@ -46,4 +47,9 @@ func (s *ProjectService) GetProjectByID(ctx context.Context, id string) (models.
 // ListProjects returns all projects.
 func (s *ProjectService) ListProjects(ctx context.Context) ([]models.Project, error) {
 	return s.projects.ListProjects(ctx)
+}
+
+// DeleteProject removes the project identified by id.
+func (s *ProjectService) DeleteProject(ctx context.Context, id string) error {
+	return s.projects.DeleteProject(ctx, id)
 }

@@ -69,6 +69,16 @@ func (h *Handler) GetProject(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, project)
 }
 
+// DeleteProject removes the project identified by the id path parameter.
+func (h *Handler) DeleteProject(w http.ResponseWriter, r *http.Request) {
+	if err := h.projectService.DeleteProject(r.Context(), r.PathValue("id")); err != nil {
+		handleProjectError(w, err)
+		return
+	}
+
+	w.WriteHeader(http.StatusNoContent)
+}
+
 func decodeJSON(r *http.Request, destination any) error {
 	decoder := json.NewDecoder(r.Body)
 	decoder.DisallowUnknownFields()

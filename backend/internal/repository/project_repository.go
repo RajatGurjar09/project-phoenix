@@ -84,6 +84,21 @@ func (r *ProjectRepository) ListProjects(ctx context.Context) ([]models.Project,
 	return projects, nil
 }
 
+// DeleteProject removes the project identified by id.
+func (r *ProjectRepository) DeleteProject(ctx context.Context, id string) error {
+	const query = `DELETE FROM projects WHERE id = $1`
+
+	result, err := r.db.Exec(ctx, query, id)
+	if err != nil {
+		return fmt.Errorf("delete project %q: %w", id, err)
+	}
+	if result.RowsAffected() == 0 {
+		return fmt.Errorf("delete project %q: %w", id, ErrProjectNotFound)
+	}
+
+	return nil
+}
+
 type projectScanner interface {
 	Scan(dest ...any) error
 }
