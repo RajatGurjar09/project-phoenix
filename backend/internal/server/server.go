@@ -25,6 +25,7 @@ func New(address string, version string, startedAt time.Time, projectService *se
 	mux.HandleFunc("POST /projects", h.CreateProject)
 	mux.HandleFunc("GET /projects", h.ListProjects)
 	mux.HandleFunc("GET /projects/{id}", h.GetProject)
+	mux.HandleFunc("PATCH /projects/{id}", h.UpdateProject)
 	mux.HandleFunc("DELETE /projects/{id}", h.DeleteProject)
 
 	return &http.Server{

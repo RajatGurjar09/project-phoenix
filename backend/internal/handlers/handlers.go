@@ -14,6 +14,7 @@ import (
 type ProjectService interface {
 	CreateProject(rctx context.Context, project models.Project) (models.Project, error)
 	GetProjectByID(rctx context.Context, id string) (models.Project, error)
+	UpdateProject(rctx context.Context, id string, project models.Project) (models.Project, error)
 	ListProjects(rctx context.Context) ([]models.Project, error)
 	DeleteProject(rctx context.Context, id string) error
 }

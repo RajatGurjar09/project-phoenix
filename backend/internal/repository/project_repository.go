@@ -56,6 +56,25 @@ func (r *ProjectRepository) GetProjectByID(ctx context.Context, id string) (mode
 	return project, nil
 }
 
+// UpdateProject updates the mutable fields for the project identified by id.
+func (r *ProjectRepository) UpdateProject(ctx context.Context, id string, project models.Project) (models.Project, error) {
+	const query = `
+		UPDATE projects
+		SET name = $1, description = $2, updated_at = NOW()
+		WHERE id = $3
+		RETURNING id, name, description, created_at, updated_at`
+
+	updatedProject, err := scanProject(r.db.QueryRow(ctx, query, project.Name, project.Description, id))
+	if errors.Is(err, pgx.ErrNoRows) {
+		return models.Project{}, fmt.Errorf("update project %q: %w", id, ErrProjectNotFound)
+	}
+	if err != nil {
+		return models.Project{}, fmt.Errorf("update project %q: %w", id, err)
+	}
+
+	return updatedProject, nil
+}
+
 // ListProjects returns all projects ordered from oldest to newest.
 func (r *ProjectRepository) ListProjects(ctx context.Context) ([]models.Project, error) {
 	const query = `

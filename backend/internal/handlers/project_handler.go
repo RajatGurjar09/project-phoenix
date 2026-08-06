@@ -69,6 +69,26 @@ func (h *Handler) GetProject(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, project)
 }
 
+// UpdateProject updates the project identified by the id path parameter.
+func (h *Handler) UpdateProject(w http.ResponseWriter, r *http.Request) {
+	var request createProjectRequest
+	if err := decodeJSON(r, &request); err != nil {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "invalid request body"})
+		return
+	}
+
+	project, err := h.projectService.UpdateProject(r.Context(), r.PathValue("id"), models.Project{
+		Name:        request.Name,
+		Description: request.Description,
+	})
+	if err != nil {
+		handleProjectError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, project)
+}
+
 // DeleteProject removes the project identified by the id path parameter.
 func (h *Handler) DeleteProject(w http.ResponseWriter, r *http.Request) {
 	if err := h.projectService.DeleteProject(r.Context(), r.PathValue("id")); err != nil {
