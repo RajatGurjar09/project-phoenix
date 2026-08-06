@@ -1,19 +1,30 @@
 package handlers
 
 import (
+	"context"
 	"encoding/json"
 	"net/http"
 	"os"
 	"time"
+
+	"github.com/RajatGurjar09/project-phoenix/backend/internal/models"
 )
 
-type Handler struct {
-	version   string
-	startedAt time.Time
+// ProjectService defines the project operations used by HTTP handlers.
+type ProjectService interface {
+	CreateProject(rctx context.Context, project models.Project) (models.Project, error)
+	GetProjectByID(rctx context.Context, id string) (models.Project, error)
+	ListProjects(rctx context.Context) ([]models.Project, error)
 }
 
-func New(version string, startedAt time.Time) *Handler {
-	return &Handler{version: version, startedAt: startedAt}
+type Handler struct {
+	version        string
+	startedAt      time.Time
+	projectService ProjectService
+}
+
+func New(version string, startedAt time.Time, projectService ProjectService) *Handler {
+	return &Handler{version: version, startedAt: startedAt, projectService: projectService}
 }
 
 func (h *Handler) Health(w http.ResponseWriter, _ *http.Request) {

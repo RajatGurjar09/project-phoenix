@@ -7,7 +7,9 @@ import (
 
 	"github.com/RajatGurjar09/project-phoenix/backend/internal/config"
 	"github.com/RajatGurjar09/project-phoenix/backend/internal/database"
+	"github.com/RajatGurjar09/project-phoenix/backend/internal/repository"
 	"github.com/RajatGurjar09/project-phoenix/backend/internal/server"
+	"github.com/RajatGurjar09/project-phoenix/backend/internal/service"
 	"github.com/RajatGurjar09/project-phoenix/backend/internal/version"
 )
 
@@ -22,7 +24,9 @@ func main() {
 	}
 	defer db.Close()
 
-	api := server.New(cfg.Address, version.Version, time.Now())
+	projectRepository := repository.NewProjectRepository(db)
+	projectService := service.NewProjectService(projectRepository)
+	api := server.New(cfg.Address, version.Version, time.Now(), projectService)
 
 	log.Printf("API listening on %s", cfg.Address)
 	if err := api.ListenAndServe(); err != nil {
