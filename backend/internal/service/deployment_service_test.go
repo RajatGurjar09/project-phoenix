@@ -29,17 +29,24 @@ func (m *mockDeploymentStore) CreateDeployment(_ context.Context, d models.Deplo
 	return d, nil
 }
 
-func (m *mockDeploymentStore) UpdateDeploymentStatus(_ context.Context, id string, status string) (models.Deployment, error) {
+func (m *mockDeploymentStore) UpdateDeployment(_ context.Context, id string, status string, containerID *string) (models.Deployment, error) {
 	m.updated[id] = status
 	for i, d := range m.created {
 		if d.ID == id {
 			d.Status = status
+			if containerID != nil {
+				d.ContainerID = containerID
+			}
 			d.UpdatedAt = time.Now()
 			m.created[i] = d
 			return d, nil
 		}
 	}
 	return models.Deployment{}, errors.New("not found")
+}
+
+func (m *mockDeploymentStore) UpdateDeploymentStatus(ctx context.Context, id string, status string) (models.Deployment, error) {
+	return m.UpdateDeployment(ctx, id, status, nil)
 }
 
 func (m *mockDeploymentStore) ListDeploymentsByProject(_ context.Context, _ string) ([]models.Deployment, error) {
@@ -58,6 +65,7 @@ func (m *mockDeploymentStore) GetDeploymentByID(_ context.Context, id string) (m
 type mockContainerRuntime struct {
 	createFn func(ctx context.Context, imageName string) (string, error)
 	startFn  func(ctx context.Context, containerID string) error
+	stopFn   func(ctx context.Context, containerID string) error
 }
 
 func (m *mockContainerRuntime) CreateContainer(ctx context.Context, imageName string) (string, error) {
@@ -70,6 +78,13 @@ func (m *mockContainerRuntime) CreateContainer(ctx context.Context, imageName st
 func (m *mockContainerRuntime) StartContainer(ctx context.Context, containerID string) error {
 	if m.startFn != nil {
 		return m.startFn(ctx, containerID)
+	}
+	return nil
+}
+
+func (m *mockContainerRuntime) StopContainer(ctx context.Context, containerID string) error {
+	if m.stopFn != nil {
+		return m.stopFn(ctx, containerID)
 	}
 	return nil
 }
@@ -89,6 +104,9 @@ func TestCreateDeploymentSuccess(t *testing.T) {
 
 	if d.Status != "running" {
 		t.Errorf("CreateDeployment() status = %q, want %q", d.Status, "running")
+	}
+	if d.ContainerID == nil || *d.ContainerID != "container-123" {
+		t.Errorf("CreateDeployment() containerID = %v, want %q", d.ContainerID, "container-123")
 	}
 
 	if store.updated["dep-123"] != "running" {
@@ -152,5 +170,44 @@ func TestCreateDeploymentContainerStartError(t *testing.T) {
 
 	if store.updated["dep-123"] != "failed" {
 		t.Errorf("store updated status = %q, want %q", store.updated["dep-123"], "failed")
+	}
+}
+
+func TestStopDeploymentSuccess(t *testing.T) {
+	store := newMockDeploymentStore()
+	runtime := &mockContainerRuntime{}
+	svc := NewDeploymentService(store, runtime)
+
+	created, err := svc.CreateDeployment(context.Background(), models.Deployment{
+		ProjectID: "proj-1",
+		Image:     "nginx:latest",
+	})
+	if err != nil {
+		t.Fatalf("CreateDeployment() unexpected error = %v", err)
+	}
+
+	stopped, err := svc.StopDeployment(context.Background(), created.ID)
+	if err != nil {
+		t.Fatalf("StopDeployment() unexpected error = %v", err)
+	}
+
+	if stopped.Status != "stopped" {
+		t.Errorf("StopDeployment() status = %q, want %q", stopped.Status, "stopped")
+	}
+}
+
+func TestStopDeploymentNoContainerID(t *testing.T) {
+	store := newMockDeploymentStore()
+	svc := NewDeploymentService(store, nil)
+
+	dep, _ := store.CreateDeployment(context.Background(), models.Deployment{
+		ProjectID: "proj-1",
+		Image:     "nginx:latest",
+		Status:    "running",
+	})
+
+	_, err := svc.StopDeployment(context.Background(), dep.ID)
+	if !errors.Is(err, ErrDeploymentContainerNotFound) {
+		t.Errorf("StopDeployment() error = %v, want %v", err, ErrDeploymentContainerNotFound)
 	}
 }

@@ -57,9 +57,26 @@ func (h *Handler) GetDeployment(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, deployment)
 }
 
+// StopDeployment stops the container for the deployment identified by the id path parameter.
+func (h *Handler) StopDeployment(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "deployment id is required"})
+		return
+	}
+
+	deployment, err := h.deploymentService.StopDeployment(r.Context(), id)
+	if err != nil {
+		handleDeploymentError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, deployment)
+}
+
 func handleDeploymentError(w http.ResponseWriter, err error) {
 	switch {
-	case errors.Is(err, service.ErrDeploymentImageRequired), errors.Is(err, service.ErrDeploymentStatusRequired):
+	case errors.Is(err, service.ErrDeploymentImageRequired), errors.Is(err, service.ErrDeploymentStatusRequired), errors.Is(err, service.ErrDeploymentContainerNotFound):
 		writeJSON(w, http.StatusBadRequest, errorResponse{Error: err.Error()})
 	case errors.Is(err, repository.ErrDeploymentNotFound):
 		writeJSON(w, http.StatusNotFound, errorResponse{Error: "deployment not found"})

@@ -19,3 +19,8 @@ func (r *Runtime) CreateContainer(ctx context.Context, imageName string) (string
 func (r *Runtime) StartContainer(ctx context.Context, containerID string) error {
 	return StartContainer(ctx, containerID)
 }
+
+// StopContainer stops a running container identified by containerID.
+func (r *Runtime) StopContainer(ctx context.Context, containerID string) error {
+	return StopContainer(ctx, containerID)
+}

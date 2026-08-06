@@ -24,6 +24,7 @@ type DeploymentService interface {
 	CreateDeployment(rctx context.Context, deployment models.Deployment) (models.Deployment, error)
 	ListDeploymentsByProject(rctx context.Context, projectID string) ([]models.Deployment, error)
 	GetDeploymentByID(rctx context.Context, id string) (models.Deployment, error)
+	StopDeployment(rctx context.Context, id string) (models.Deployment, error)
 }
 
 type Handler struct {

@@ -83,3 +83,40 @@ func startDockerContainer(ctx context.Context, containerID string) error {
 		container.StartOptions{},
 	)
 }
+
+// StopContainer stops a running Docker container.
+func StopContainer(ctx context.Context, containerID string) error {
+	return stopContainer(ctx, containerID, stopDockerContainer)
+}
+
+func stopContainer(
+	ctx context.Context,
+	containerID string,
+	stop func(context.Context, string) error,
+) error {
+	containerID = strings.TrimSpace(containerID)
+
+	if containerID == "" {
+		return fmt.Errorf("container id is required")
+	}
+
+	if err := stop(ctx, containerID); err != nil {
+		return fmt.Errorf("stop container %q: %w", containerID, err)
+	}
+
+	return nil
+}
+
+func stopDockerContainer(ctx context.Context, containerID string) error {
+	client, err := NewClient()
+	if err != nil {
+		return fmt.Errorf("create docker client: %w", err)
+	}
+	defer client.Close()
+
+	return client.ContainerStop(
+		ctx,
+		containerID,
+		container.StopOptions{},
+	)
+}

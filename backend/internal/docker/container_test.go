@@ -52,3 +52,26 @@ func TestCreateContainerDoesNotCreateWhenPullFails(t *testing.T) {
 		t.Fatal("container creation was called after image pull failed")
 	}
 }
+
+func TestStopContainerValidatesID(t *testing.T) {
+	err := stopContainer(context.Background(), "   ", func(_ context.Context, _ string) error {
+		return nil
+	})
+	if err == nil {
+		t.Fatal("stopContainer() expected error for empty ID, got nil")
+	}
+}
+
+func TestStopContainerCallsStopFunction(t *testing.T) {
+	var stoppedID string
+	err := stopContainer(context.Background(), " container-123 ", func(_ context.Context, id string) error {
+		stoppedID = id
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("stopContainer() unexpected error = %v", err)
+	}
+	if stoppedID != "container-123" {
+		t.Fatalf("stoppedID = %q, want %q", stoppedID, "container-123")
+	}
+}

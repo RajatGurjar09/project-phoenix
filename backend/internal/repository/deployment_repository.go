@@ -26,9 +26,9 @@ func NewDeploymentRepository(db *pgxpool.Pool) *DeploymentRepository {
 // CreateDeployment stores deployment and returns it with database-generated fields populated.
 func (r *DeploymentRepository) CreateDeployment(ctx context.Context, deployment models.Deployment) (models.Deployment, error) {
 	const query = `
-		INSERT INTO deployments (project_id, image, status)
-		VALUES ($1, $2, $3)
-		RETURNING id, project_id, image, status, created_at, updated_at`
+		INSERT INTO deployments (project_id, image, status, container_id)
+		VALUES ($1, $2, $3, $4)
+		RETURNING id, project_id, image, status, container_id, created_at, updated_at`
 
 	createdDeployment, err := scanDeployment(r.db.QueryRow(
 		ctx,
@@ -36,6 +36,7 @@ func (r *DeploymentRepository) CreateDeployment(ctx context.Context, deployment 
 		deployment.ProjectID,
 		deployment.Image,
 		deployment.Status,
+		deployment.ContainerID,
 	))
 	if err != nil {
 		return models.Deployment{}, fmt.Errorf("create deployment: %w", err)
@@ -44,29 +45,34 @@ func (r *DeploymentRepository) CreateDeployment(ctx context.Context, deployment 
 	return createdDeployment, nil
 }
 
-// UpdateDeploymentStatus updates the status and updated_at timestamp of the deployment identified by id.
-func (r *DeploymentRepository) UpdateDeploymentStatus(ctx context.Context, id string, status string) (models.Deployment, error) {
+// UpdateDeployment updates mutable fields (status, container_id) for the deployment identified by id.
+func (r *DeploymentRepository) UpdateDeployment(ctx context.Context, id string, status string, containerID *string) (models.Deployment, error) {
 	const query = `
 		UPDATE deployments
-		SET status = $1, updated_at = NOW()
-		WHERE id = $2
-		RETURNING id, project_id, image, status, created_at, updated_at`
+		SET status = $1, container_id = COALESCE($2, container_id), updated_at = NOW()
+		WHERE id = $3
+		RETURNING id, project_id, image, status, container_id, created_at, updated_at`
 
-	updatedDeployment, err := scanDeployment(r.db.QueryRow(ctx, query, status, id))
+	updatedDeployment, err := scanDeployment(r.db.QueryRow(ctx, query, status, containerID, id))
 	if errors.Is(err, pgx.ErrNoRows) {
-		return models.Deployment{}, fmt.Errorf("update deployment status %q: %w", id, ErrDeploymentNotFound)
+		return models.Deployment{}, fmt.Errorf("update deployment %q: %w", id, ErrDeploymentNotFound)
 	}
 	if err != nil {
-		return models.Deployment{}, fmt.Errorf("update deployment status %q: %w", id, err)
+		return models.Deployment{}, fmt.Errorf("update deployment %q: %w", id, err)
 	}
 
 	return updatedDeployment, nil
 }
 
+// UpdateDeploymentStatus updates the status and updated_at timestamp of the deployment identified by id.
+func (r *DeploymentRepository) UpdateDeploymentStatus(ctx context.Context, id string, status string) (models.Deployment, error) {
+	return r.UpdateDeployment(ctx, id, status, nil)
+}
+
 // ListDeploymentsByProject returns deployments for projectID from oldest to newest.
 func (r *DeploymentRepository) ListDeploymentsByProject(ctx context.Context, projectID string) ([]models.Deployment, error) {
 	const query = `
-		SELECT id, project_id, image, status, created_at, updated_at
+		SELECT id, project_id, image, status, container_id, created_at, updated_at
 		FROM deployments
 		WHERE project_id = $1
 		ORDER BY created_at ASC, id ASC`
@@ -95,7 +101,7 @@ func (r *DeploymentRepository) ListDeploymentsByProject(ctx context.Context, pro
 // GetDeploymentByID returns the deployment identified by id.
 func (r *DeploymentRepository) GetDeploymentByID(ctx context.Context, id string) (models.Deployment, error) {
 	const query = `
-		SELECT id, project_id, image, status, created_at, updated_at
+		SELECT id, project_id, image, status, container_id, created_at, updated_at
 		FROM deployments
 		WHERE id = $1`
 
@@ -121,6 +127,7 @@ func scanDeployment(row deploymentScanner) (models.Deployment, error) {
 		&deployment.ProjectID,
 		&deployment.Image,
 		&deployment.Status,
+		&deployment.ContainerID,
 		&deployment.CreatedAt,
 		&deployment.UpdatedAt,
 	); err != nil {
