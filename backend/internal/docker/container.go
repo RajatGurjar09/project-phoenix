@@ -46,3 +46,40 @@ func createDockerContainer(ctx context.Context, imageName string) (string, error
 
 	return response.ID, nil
 }
+
+// StartContainer starts an existing Docker container.
+func StartContainer(ctx context.Context, containerID string) error {
+	return startContainer(ctx, containerID, startDockerContainer)
+}
+
+func startContainer(
+	ctx context.Context,
+	containerID string,
+	start func(context.Context, string) error,
+) error {
+	containerID = strings.TrimSpace(containerID)
+
+	if containerID == "" {
+		return fmt.Errorf("container id is required")
+	}
+
+	if err := start(ctx, containerID); err != nil {
+		return fmt.Errorf("start container %q: %w", containerID, err)
+	}
+
+	return nil
+}
+
+func startDockerContainer(ctx context.Context, containerID string) error {
+	client, err := NewClient()
+	if err != nil {
+		return fmt.Errorf("create docker client: %w", err)
+	}
+	defer client.Close()
+
+	return client.ContainerStart(
+		ctx,
+		containerID,
+		container.StartOptions{},
+	)
+}
