@@ -8,10 +8,10 @@ export default function Error({ reset }: { reset: () => void }) {
           Connection error
         </p>
         <h1 className="mt-3 text-2xl font-semibold text-slate-950">
-          Phoenix API is unavailable
+          Phoenix Console is unavailable
         </h1>
         <p className="mt-3 text-sm leading-6 text-slate-600">
-          We couldn’t retrieve the backend status. Check the service and try again.
+          We couldn’t retrieve dashboard data. Check the backend service and try again.
         </p>
         <button
           type="button"

@@ -11,6 +11,14 @@ export type BackendStatus = {
   responseTimeMs: number;
 };
 
+export type Project = {
+  id: string;
+  name: string;
+  description: string | null;
+  created_at: string;
+  updated_at: string;
+};
+
 const backendUrl = process.env.BACKEND_URL ?? "http://backend:8080";
 
 async function fetchBackend<T>(path: string): Promise<T> {
@@ -31,4 +39,8 @@ export async function getBackendStatus(): Promise<BackendStatus> {
     health,
     responseTimeMs: Date.now() - startedAt,
   };
+}
+
+export async function getProjects(): Promise<Project[]> {
+  return fetchBackend<Project[]>("/projects");
 }

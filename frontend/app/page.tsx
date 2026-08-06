@@ -1,13 +1,14 @@
-import { getBackendStatus } from "@/lib/backend";
-import { ServiceCard } from "./components/service-card";
+import { getBackendStatus, getProjects } from "@/lib/backend";
+import { ProjectCard } from "./components/project-card";
 import { StatusCard } from "./components/status-card";
 
 export const dynamic = "force-dynamic";
 
-const platformServices = ["PostgreSQL", "Redis", "Prometheus", "Grafana"];
-
 export default async function Home() {
-  const { health, responseTimeMs } = await getBackendStatus();
+  const [{ health, responseTimeMs }, projects] = await Promise.all([
+    getBackendStatus(),
+    getProjects(),
+  ]);
   const isHealthy = health.status.toLowerCase() === "ok";
 
   return (
@@ -72,21 +73,30 @@ export default async function Home() {
           </div>
         </section>
 
-        <section className="pt-12" aria-labelledby="platform-services-heading">
+        <section className="pt-12" aria-labelledby="projects-heading">
           <div>
-            <h2 id="platform-services-heading" className="text-xl font-semibold">
-              Platform Services
+            <h2 id="projects-heading" className="text-xl font-semibold">
+              Projects
             </h2>
             <p className="mt-1 text-sm text-slate-500">
-              Core infrastructure integrations coming to Phoenix.
+              Projects managed by the Phoenix platform.
             </p>
           </div>
 
-          <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-4">
-            {platformServices.map((service) => (
-              <ServiceCard key={service} name={service} />
-            ))}
-          </div>
+          {projects.length === 0 ? (
+            <div className="mt-6 rounded-2xl border border-dashed border-slate-300 bg-white p-8 text-center">
+              <h3 className="font-semibold text-slate-950">No projects yet</h3>
+              <p className="mt-2 text-sm text-slate-500">
+                Create a project through the Phoenix API to see it here.
+              </p>
+            </div>
+          ) : (
+            <div className="mt-6 grid gap-5 sm:grid-cols-2 lg:grid-cols-3">
+              {projects.map((project) => (
+                <ProjectCard key={project.id} project={project} />
+              ))}
+            </div>
+          )}
         </section>
       </div>
     </main>
