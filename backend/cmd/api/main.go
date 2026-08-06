@@ -1,16 +1,27 @@
 package main
 
 import (
+	"context"
 	"log"
 	"time"
 
 	"github.com/RajatGurjar09/project-phoenix/backend/internal/config"
+	"github.com/RajatGurjar09/project-phoenix/backend/internal/database"
 	"github.com/RajatGurjar09/project-phoenix/backend/internal/server"
 	"github.com/RajatGurjar09/project-phoenix/backend/internal/version"
 )
 
 func main() {
 	cfg := config.Load()
+	databaseConfig := database.LoadConfig()
+	databaseContext, cancel := context.WithTimeout(context.Background(), 5*time.Second)
+	db, err := database.Connect(databaseContext, databaseConfig)
+	cancel()
+	if err != nil {
+		log.Fatalf("database startup failed: %v", err)
+	}
+	defer db.Close()
+
 	api := server.New(cfg.Address, version.Version, time.Now())
 
 	log.Printf("API listening on %s", cfg.Address)
