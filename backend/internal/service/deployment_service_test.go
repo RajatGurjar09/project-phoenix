@@ -63,9 +63,11 @@ func (m *mockDeploymentStore) GetDeploymentByID(_ context.Context, id string) (m
 }
 
 type mockContainerRuntime struct {
-	createFn func(ctx context.Context, imageName string) (string, error)
-	startFn  func(ctx context.Context, containerID string) error
-	stopFn   func(ctx context.Context, containerID string) error
+	createFn  func(ctx context.Context, imageName string) (string, error)
+	startFn   func(ctx context.Context, containerID string) error
+	stopFn    func(ctx context.Context, containerID string) error
+	restartFn func(ctx context.Context, containerID string) error
+	removeFn  func(ctx context.Context, containerID string) error
 }
 
 func (m *mockContainerRuntime) CreateContainer(ctx context.Context, imageName string) (string, error) {
@@ -85,6 +87,20 @@ func (m *mockContainerRuntime) StartContainer(ctx context.Context, containerID s
 func (m *mockContainerRuntime) StopContainer(ctx context.Context, containerID string) error {
 	if m.stopFn != nil {
 		return m.stopFn(ctx, containerID)
+	}
+	return nil
+}
+
+func (m *mockContainerRuntime) RestartContainer(ctx context.Context, containerID string) error {
+	if m.restartFn != nil {
+		return m.restartFn(ctx, containerID)
+	}
+	return nil
+}
+
+func (m *mockContainerRuntime) RemoveContainer(ctx context.Context, containerID string) error {
+	if m.removeFn != nil {
+		return m.removeFn(ctx, containerID)
 	}
 	return nil
 }
@@ -209,5 +225,102 @@ func TestStopDeploymentNoContainerID(t *testing.T) {
 	_, err := svc.StopDeployment(context.Background(), dep.ID)
 	if !errors.Is(err, ErrDeploymentContainerNotFound) {
 		t.Errorf("StopDeployment() error = %v, want %v", err, ErrDeploymentContainerNotFound)
+	}
+}
+
+func TestRestartDeploymentSuccess(t *testing.T) {
+	store := newMockDeploymentStore()
+	runtime := &mockContainerRuntime{}
+	svc := NewDeploymentService(store, runtime)
+
+	created, err := svc.CreateDeployment(context.Background(), models.Deployment{
+		ProjectID: "proj-1",
+		Image:     "nginx:latest",
+	})
+	if err != nil {
+		t.Fatalf("CreateDeployment() unexpected error = %v", err)
+	}
+
+	stopped, err := svc.StopDeployment(context.Background(), created.ID)
+	if err != nil {
+		t.Fatalf("StopDeployment() unexpected error = %v", err)
+	}
+
+	restarted, err := svc.RestartDeployment(context.Background(), stopped.ID)
+	if err != nil {
+		t.Fatalf("RestartDeployment() unexpected error = %v", err)
+	}
+
+	if restarted.Status != "running" {
+		t.Errorf("RestartDeployment() status = %q, want %q", restarted.Status, "running")
+	}
+
+	if restarted.ContainerID == nil || *restarted.ContainerID != "container-123" {
+		t.Errorf("RestartDeployment() containerID = %v, want %q", restarted.ContainerID, "container-123")
+	}
+}
+
+func TestRestartDeploymentRejectsRemoved(t *testing.T) {
+	store := newMockDeploymentStore()
+	runtime := &mockContainerRuntime{}
+	svc := NewDeploymentService(store, runtime)
+
+	dep, _ := store.CreateDeployment(context.Background(), models.Deployment{
+		ProjectID: "proj-1",
+		Image:     "nginx:latest",
+		Status:    "removed",
+	})
+
+	containerID := "container-123"
+	dep.ContainerID = &containerID
+	store.created[0] = dep
+
+	_, err := svc.RestartDeployment(context.Background(), dep.ID)
+	if !errors.Is(err, ErrInvalidDeploymentState) {
+		t.Errorf("RestartDeployment() error = %v, want %v", err, ErrInvalidDeploymentState)
+	}
+}
+
+func TestRemoveDeploymentSuccess(t *testing.T) {
+	store := newMockDeploymentStore()
+	runtime := &mockContainerRuntime{}
+	svc := NewDeploymentService(store, runtime)
+
+	created, err := svc.CreateDeployment(context.Background(), models.Deployment{
+		ProjectID: "proj-1",
+		Image:     "nginx:latest",
+	})
+	if err != nil {
+		t.Fatalf("CreateDeployment() unexpected error = %v", err)
+	}
+
+	removed, err := svc.RemoveDeployment(context.Background(), created.ID)
+	if err != nil {
+		t.Fatalf("RemoveDeployment() unexpected error = %v", err)
+	}
+
+	if removed.Status != "removed" {
+		t.Errorf("RemoveDeployment() status = %q, want %q", removed.Status, "removed")
+	}
+}
+
+func TestRemoveDeploymentRejectsRemoved(t *testing.T) {
+	store := newMockDeploymentStore()
+	runtime := &mockContainerRuntime{}
+	svc := NewDeploymentService(store, runtime)
+
+	dep, _ := store.CreateDeployment(context.Background(), models.Deployment{
+		ProjectID: "proj-1",
+		Image:     "nginx:latest",
+		Status:    "removed",
+	})
+
+	containerID := "container-123"
+	dep.ContainerID = &containerID
+	store.created[0] = dep
+
+	_, err := svc.RemoveDeployment(context.Background(), dep.ID)
+	if !errors.Is(err, ErrInvalidDeploymentState) {
+		t.Errorf("RemoveDeployment() error = %v, want %v", err, ErrInvalidDeploymentState)
 	}
 }

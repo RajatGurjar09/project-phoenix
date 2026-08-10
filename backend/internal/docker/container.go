@@ -120,3 +120,77 @@ func stopDockerContainer(ctx context.Context, containerID string) error {
 		container.StopOptions{},
 	)
 }
+
+// RestartContainer restarts an existing Docker container.
+func RestartContainer(ctx context.Context, containerID string) error {
+	return restartContainer(ctx, containerID, restartDockerContainer)
+}
+
+func restartContainer(
+	ctx context.Context,
+	containerID string,
+	restart func(context.Context, string) error,
+) error {
+	containerID = strings.TrimSpace(containerID)
+
+	if containerID == "" {
+		return fmt.Errorf("container id is required")
+	}
+
+	if err := restart(ctx, containerID); err != nil {
+		return fmt.Errorf("restart container %q: %w", containerID, err)
+	}
+
+	return nil
+}
+
+func restartDockerContainer(ctx context.Context, containerID string) error {
+	client, err := NewClient()
+	if err != nil {
+		return fmt.Errorf("create docker client: %w", err)
+	}
+	defer client.Close()
+
+	return client.ContainerRestart(
+		ctx,
+		containerID,
+		container.StopOptions{},
+	)
+}
+
+// RemoveContainer force-removes an existing Docker container.
+func RemoveContainer(ctx context.Context, containerID string) error {
+	return removeContainer(ctx, containerID, removeDockerContainer)
+}
+
+func removeContainer(
+	ctx context.Context,
+	containerID string,
+	remove func(context.Context, string) error,
+) error {
+	containerID = strings.TrimSpace(containerID)
+
+	if containerID == "" {
+		return fmt.Errorf("container id is required")
+	}
+
+	if err := remove(ctx, containerID); err != nil {
+		return fmt.Errorf("remove container %q: %w", containerID, err)
+	}
+
+	return nil
+}
+
+func removeDockerContainer(ctx context.Context, containerID string) error {
+	client, err := NewClient()
+	if err != nil {
+		return fmt.Errorf("create docker client: %w", err)
+	}
+	defer client.Close()
+
+	return client.ContainerRemove(
+		ctx,
+		containerID,
+		container.RemoveOptions{Force: true},
+	)
+}

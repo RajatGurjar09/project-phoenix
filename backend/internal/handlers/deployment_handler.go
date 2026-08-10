@@ -74,9 +74,46 @@ func (h *Handler) StopDeployment(w http.ResponseWriter, r *http.Request) {
 	writeJSON(w, http.StatusOK, deployment)
 }
 
+// RestartDeployment restarts the container for the deployment identified by the id path parameter.
+func (h *Handler) RestartDeployment(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "deployment id is required"})
+		return
+	}
+
+	deployment, err := h.deploymentService.RestartDeployment(r.Context(), id)
+	if err != nil {
+		handleDeploymentError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, deployment)
+}
+
+// RemoveDeployment removes the container and marks the deployment as removed.
+func (h *Handler) RemoveDeployment(w http.ResponseWriter, r *http.Request) {
+	id := r.PathValue("id")
+	if id == "" {
+		writeJSON(w, http.StatusBadRequest, errorResponse{Error: "deployment id is required"})
+		return
+	}
+
+	deployment, err := h.deploymentService.RemoveDeployment(r.Context(), id)
+	if err != nil {
+		handleDeploymentError(w, err)
+		return
+	}
+
+	writeJSON(w, http.StatusOK, deployment)
+}
+
 func handleDeploymentError(w http.ResponseWriter, err error) {
 	switch {
-	case errors.Is(err, service.ErrDeploymentImageRequired), errors.Is(err, service.ErrDeploymentStatusRequired), errors.Is(err, service.ErrDeploymentContainerNotFound):
+	case errors.Is(err, service.ErrDeploymentImageRequired),
+		errors.Is(err, service.ErrDeploymentStatusRequired),
+		errors.Is(err, service.ErrDeploymentContainerNotFound),
+		errors.Is(err, service.ErrInvalidDeploymentState):
 		writeJSON(w, http.StatusBadRequest, errorResponse{Error: err.Error()})
 	case errors.Is(err, repository.ErrDeploymentNotFound):
 		writeJSON(w, http.StatusNotFound, errorResponse{Error: "deployment not found"})

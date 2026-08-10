@@ -15,6 +15,8 @@ var (
 	ErrDeploymentStatusRequired = errors.New("deployment status is required")
 	// ErrDeploymentContainerNotFound is returned when a deployment has no container ID.
 	ErrDeploymentContainerNotFound = errors.New("deployment container not found")
+	// ErrInvalidDeploymentState is returned when a deployment lifecycle transition is not allowed.
+	ErrInvalidDeploymentState = errors.New("invalid deployment state")
 )
 
 // ContainerRuntime defines container lifecycle operations needed by DeploymentService.
@@ -22,6 +24,8 @@ type ContainerRuntime interface {
 	CreateContainer(ctx context.Context, imageName string) (string, error)
 	StartContainer(ctx context.Context, containerID string) error
 	StopContainer(ctx context.Context, containerID string) error
+	RestartContainer(ctx context.Context, containerID string) error
+	RemoveContainer(ctx context.Context, containerID string) error
 }
 
 // DeploymentStore defines the persistence operations needed by DeploymentService.
@@ -91,6 +95,10 @@ func (s *DeploymentService) StopDeployment(ctx context.Context, id string) (mode
 		return models.Deployment{}, err
 	}
 
+	if deployment.Status != "running" {
+		return models.Deployment{}, ErrInvalidDeploymentState
+	}
+
 	if deployment.ContainerID == nil || strings.TrimSpace(*deployment.ContainerID) == "" {
 		return models.Deployment{}, ErrDeploymentContainerNotFound
 	}
@@ -102,6 +110,56 @@ func (s *DeploymentService) StopDeployment(ctx context.Context, id string) (mode
 	}
 
 	return s.deployments.UpdateDeployment(ctx, id, "stopped", deployment.ContainerID)
+}
+
+// RestartDeployment restarts the container associated with the deployment identified by id.
+func (s *DeploymentService) RestartDeployment(ctx context.Context, id string) (models.Deployment, error) {
+	deployment, err := s.deployments.GetDeploymentByID(ctx, id)
+	if err != nil {
+		return models.Deployment{}, err
+	}
+
+	if deployment.Status != "running" && deployment.Status != "stopped" {
+		return models.Deployment{}, ErrInvalidDeploymentState
+	}
+
+	if deployment.ContainerID == nil || strings.TrimSpace(*deployment.ContainerID) == "" {
+		return models.Deployment{}, ErrDeploymentContainerNotFound
+	}
+
+	if s.runtime != nil {
+		if err := s.runtime.RestartContainer(ctx, *deployment.ContainerID); err != nil {
+			return models.Deployment{}, err
+		}
+	}
+
+	return s.deployments.UpdateDeployment(ctx, id, "running", deployment.ContainerID)
+}
+
+// RemoveDeployment force-removes the container associated with the deployment identified by id.
+func (s *DeploymentService) RemoveDeployment(ctx context.Context, id string) (models.Deployment, error) {
+	deployment, err := s.deployments.GetDeploymentByID(ctx, id)
+	if err != nil {
+		return models.Deployment{}, err
+	}
+
+	if deployment.Status != "running" &&
+		deployment.Status != "stopped" &&
+		deployment.Status != "failed" {
+		return models.Deployment{}, ErrInvalidDeploymentState
+	}
+
+	if deployment.ContainerID == nil || strings.TrimSpace(*deployment.ContainerID) == "" {
+		return models.Deployment{}, ErrDeploymentContainerNotFound
+	}
+
+	if s.runtime != nil {
+		if err := s.runtime.RemoveContainer(ctx, *deployment.ContainerID); err != nil {
+			return models.Deployment{}, err
+		}
+	}
+
+	return s.deployments.UpdateDeployment(ctx, id, "removed", deployment.ContainerID)
 }
 
 // ListDeploymentsByProject returns deployments for projectID.

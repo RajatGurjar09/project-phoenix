@@ -37,6 +37,8 @@ func New(
 	mux.HandleFunc("GET /projects/{id}/deployments", h.ListDeploymentsByProject)
 	mux.HandleFunc("GET /deployments/{id}", h.GetDeployment)
 	mux.HandleFunc("POST /deployments/{id}/stop", h.StopDeployment)
+	mux.HandleFunc("POST /deployments/{id}/restart", h.RestartDeployment)
+	mux.HandleFunc("DELETE /deployments/{id}", h.RemoveDeployment)
 
 	return &http.Server{
 		Addr:              address,

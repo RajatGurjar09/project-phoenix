@@ -24,3 +24,13 @@ func (r *Runtime) StartContainer(ctx context.Context, containerID string) error 
 func (r *Runtime) StopContainer(ctx context.Context, containerID string) error {
 	return StopContainer(ctx, containerID)
 }
+
+// RestartContainer restarts an existing container identified by containerID.
+func (r *Runtime) RestartContainer(ctx context.Context, containerID string) error {
+	return RestartContainer(ctx, containerID)
+}
+
+// RemoveContainer force-removes an existing container identified by containerID.
+func (r *Runtime) RemoveContainer(ctx context.Context, containerID string) error {
+	return RemoveContainer(ctx, containerID)
+}

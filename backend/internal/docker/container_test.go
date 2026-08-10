@@ -75,3 +75,51 @@ func TestStopContainerCallsStopFunction(t *testing.T) {
 		t.Fatalf("stoppedID = %q, want %q", stoppedID, "container-123")
 	}
 }
+
+func TestRestartContainerValidatesID(t *testing.T) {
+	err := restartContainer(context.Background(), "   ", func(_ context.Context, _ string) error {
+		return nil
+	})
+	if err == nil {
+		t.Fatal("restartContainer() expected error for empty ID, got nil")
+	}
+}
+
+func TestRestartContainerCallsRestartFunction(t *testing.T) {
+	var restartedID string
+
+	err := restartContainer(context.Background(), " container-123 ", func(_ context.Context, id string) error {
+		restartedID = id
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("restartContainer() unexpected error = %v", err)
+	}
+	if restartedID != "container-123" {
+		t.Fatalf("restartedID = %q, want %q", restartedID, "container-123")
+	}
+}
+
+func TestRemoveContainerValidatesID(t *testing.T) {
+	err := removeContainer(context.Background(), "   ", func(_ context.Context, _ string) error {
+		return nil
+	})
+	if err == nil {
+		t.Fatal("removeContainer() expected error for empty ID, got nil")
+	}
+}
+
+func TestRemoveContainerCallsRemoveFunction(t *testing.T) {
+	var removedID string
+
+	err := removeContainer(context.Background(), " container-123 ", func(_ context.Context, id string) error {
+		removedID = id
+		return nil
+	})
+	if err != nil {
+		t.Fatalf("removeContainer() unexpected error = %v", err)
+	}
+	if removedID != "container-123" {
+		t.Fatalf("removedID = %q, want %q", removedID, "container-123")
+	}
+}
