@@ -2,6 +2,7 @@ package handlers
 
 import (
 	"errors"
+	"log"
 	"net/http"
 
 	"github.com/RajatGurjar09/project-phoenix/backend/internal/models"
@@ -118,6 +119,7 @@ func handleDeploymentError(w http.ResponseWriter, err error) {
 	case errors.Is(err, repository.ErrDeploymentNotFound):
 		writeJSON(w, http.StatusNotFound, errorResponse{Error: "deployment not found"})
 	default:
+	        log.Printf("deployment error: %v", err)
 		writeJSON(w, http.StatusInternalServerError, errorResponse{Error: "internal server error"})
 	}
 }

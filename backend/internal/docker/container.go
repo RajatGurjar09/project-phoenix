@@ -3,6 +3,7 @@ package docker
 import (
 	"context"
 	"fmt"
+	"io"
 	"strings"
 
 	"github.com/docker/docker/api/types/container"
@@ -193,4 +194,54 @@ func removeDockerContainer(ctx context.Context, containerID string) error {
 		containerID,
 		container.RemoveOptions{Force: true},
 	)
+}
+
+// ContainerLogs returns the recent logs for an existing Docker container.
+func ContainerLogs(ctx context.Context, containerID string) (string, error) {
+	return containerLogs(ctx, containerID, getDockerContainerLogs)
+}
+
+func containerLogs(
+	ctx context.Context,
+	containerID string,
+	getLogs func(context.Context, string) (string, error),
+) (string, error) {
+	containerID = strings.TrimSpace(containerID)
+
+	if containerID == "" {
+		return "", fmt.Errorf("container id is required")
+	}
+
+	logs, err := getLogs(ctx, containerID)
+	if err != nil {
+		return "", fmt.Errorf("get logs for container %q: %w", containerID, err)
+	}
+
+	return logs, nil
+}
+
+func getDockerContainerLogs(ctx context.Context, containerID string) (string, error) {
+	client, err := NewClient()
+	if err != nil {
+		return "", fmt.Errorf("create docker client: %w", err)
+	}
+	defer client.Close()
+
+	reader, err := client.ContainerLogs(ctx, containerID, container.LogsOptions{
+		ShowStdout: true,
+		ShowStderr: true,
+		Timestamps: true,
+		Tail:       "100",
+	})
+	if err != nil {
+		return "", err
+	}
+	defer reader.Close()
+
+	data, err := io.ReadAll(reader)
+	if err != nil {
+		return "", err
+	}
+
+	return string(data), nil
 }
