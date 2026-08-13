@@ -42,7 +42,7 @@ func New(
 
 	return &http.Server{
 		Addr:              address,
-		Handler:           middleware.RequestLogger(mux),
+		Handler:           middleware.RequestLogger(middleware.CORS(mux)),
 		ReadHeaderTimeout: readHeaderTimeout,
 		ReadTimeout:       readTimeout,
 		WriteTimeout:      writeTimeout,

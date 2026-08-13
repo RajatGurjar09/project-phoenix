@@ -378,6 +378,29 @@ func TestRemoveDeploymentNoContainerID(t *testing.T) {
 	}
 }
 
+func TestRemoveFailedDeploymentWithoutContainerID(t *testing.T) {
+	store := newMockDeploymentStore()
+	svc := NewDeploymentService(store, nil)
+
+	dep, err := store.CreateDeployment(context.Background(), models.Deployment{
+		ProjectID: "proj-1",
+		Image:     "nginx:latest",
+		Status:    "failed",
+	})
+	if err != nil {
+		t.Fatalf("CreateDeployment() unexpected error = %v", err)
+	}
+
+	removed, err := svc.RemoveDeployment(context.Background(), dep.ID)
+	if err != nil {
+		t.Fatalf("RemoveDeployment() unexpected error = %v", err)
+	}
+
+	if removed.Status != "removed" {
+		t.Errorf("RemoveDeployment() status = %q, want %q", removed.Status, "removed")
+	}
+}
+
 func TestStopDeploymentRuntimeError(t *testing.T) {
 	store := newMockDeploymentStore()
 	stopErr := errors.New("docker stop failed")

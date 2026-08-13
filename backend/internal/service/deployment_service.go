@@ -150,6 +150,10 @@ func (s *DeploymentService) RemoveDeployment(ctx context.Context, id string) (mo
 	}
 
 	if deployment.ContainerID == nil || strings.TrimSpace(*deployment.ContainerID) == "" {
+		if deployment.Status == "failed" {
+			return s.deployments.UpdateDeploymentStatus(ctx, id, "removed")
+		}
+
 		return models.Deployment{}, ErrDeploymentContainerNotFound
 	}
 
